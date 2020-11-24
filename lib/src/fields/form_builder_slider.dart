@@ -6,146 +6,47 @@ import 'package:intl/intl.dart';
 
 enum DisplayValues { all, current, minMax, none }
 
-/// Field for selection of a numerical value on a slider
-class FormBuilderSlider extends FormBuilderField<double> {
-  /// Called when the user starts selecting a new value for the slider.
-  ///
-  /// This callback shouldn't be used to update the slider [value] (use
-  /// [onChanged] for that), but rather to be notified when the user has started
-  /// selecting a new value by starting a drag or with a tap.
-  ///
-  /// The value passed will be the last [value] that the slider had before the
-  /// change began.
-  ///
-  /// See also:
-  ///
-  ///  * [onChangeEnd] for a callback that is called when the value change is
-  ///    complete.
-  final ValueChanged<double> onChangeStart;
+class FormBuilderSlider extends StatefulWidget {
+  final String attribute;
+  final List<FormFieldValidator> validators;
+  final double initialValue;
+  final bool readOnly;
+  final InputDecoration decoration;
+  final ValueChanged onChanged;
+  final ValueTransformer valueTransformer;
 
-  /// Called when the user is done selecting a new value for the slider.
-  ///
-  /// This callback shouldn't be used to update the slider [value] (use
-  /// [onChanged] for that), but rather to know when the user has completed
-  /// selecting a new [value] by ending a drag or a click.
-  /// See also:
-  ///
-  ///  * [onChangeStart] for a callback that is called when a value change
-  ///    begins.
-  final ValueChanged<double> onChangeEnd;
-
-  /// The minimum value the user can select.
-  ///
-  /// Defaults to 0.0. Must be less than or equal to [max].
-  ///
-  /// If the [max] is equal to the [min], then the slider is disabled.
-  final double min;
-
-  /// The maximum value the user can select.
-  ///
-  /// Defaults to 1.0. Must be greater than or equal to [min].
-  ///
-  /// If the [max] is equal to the [min], then the slider is disabled.
   final double max;
-
-  /// The number of discrete divisions.
-  ///
-  /// Typically used with [label] to show the current discrete value.
-  ///
-  /// If null, the slider is continuous.
+  final double min;
   final int divisions;
-
-  /// A label to show above the slider when the slider is active.
-  ///
-  /// It is used to display the value of a discrete slider, and it is displayed
-  /// as part of the value indicator shape.
-  ///
-  /// The label is rendered using the active [ThemeData]'s
-  /// [ThemeData.textTheme.bodyText1] text style, with the
-  /// theme data's [ThemeData.colorScheme.onPrimaryColor]. The label's text style
-  /// can be overridden with [SliderThemeData.valueIndicatorTextStyle].
-  ///
-  /// If null, then the value indicator will not be displayed.
-  ///
-  /// Ignored if this slider is created with [Slider.adaptive].
-  ///
-  /// See also:
-  ///
-  ///  * [SliderComponentShape] for how to create a custom value indicator
-  ///    shape.
-  final String label;
-
-  /// The color to use for the portion of the slider track that is active.
-  ///
-  /// The "active" side of the slider is the side between the thumb and the
-  /// minimum value.
-  ///
-  /// Defaults to [SliderTheme.activeTrackColor] of the current [SliderTheme].
-  ///
-  /// Using a [SliderTheme] gives much more fine-grained control over the
-  /// appearance of various components of the slider.
   final Color activeColor;
-
-  /// The color for the inactive portion of the slider track.
-  ///
-  /// The "inactive" side of the slider is the side between the thumb and the
-  /// maximum value.
-  ///
-  /// Defaults to the [SliderTheme.inactiveTrackColor] of the current
-  /// [SliderTheme].
-  ///
-  /// Using a [SliderTheme] gives much more fine-grained control over the
-  /// appearance of various components of the slider.
-  ///
-  /// Ignored if this slider is created with [Slider.adaptive].
   final Color inactiveColor;
-
-  /// The cursor for a mouse pointer when it enters or is hovering over the
-  /// widget.
-  ///
-  /// If [mouseCursor] is a [MaterialStateProperty<MouseCursor>],
-  /// [MaterialStateProperty.resolve] is used for the following [MaterialState]s:
-  ///
-  ///  * [MaterialState.hovered].
-  ///  * [MaterialState.focused].
-  ///  * [MaterialState.disabled].
-  ///
-  /// If this property is null, [MaterialStateMouseCursor.clickable] will be used.
-  final MouseCursor mouseCursor;
-
-  /// The callback used to create a semantic value from a slider value.
-  ///
-  /// Defaults to formatting values as a percentage.
+  final ValueChanged<double> onChangeStart;
+  final ValueChanged<double> onChangeEnd;
+  final String label;
   final SemanticFormatterCallback semanticFormatterCallback;
-
-  /// {@macro flutter.widgets.Focus.autofocus}
-  final bool autofocus;
-
-  ///TODO: Add documentation
   final NumberFormat numberFormat;
+  final FormFieldSetter onSaved;
   final DisplayValues displayValues;
+
   final TextStyle minTextStyle;
   final TextStyle textStyle;
   final TextStyle maxTextStyle;
+  final FocusNode focusNode;
+  final bool autofocus;
+  final MouseCursor mouseCursor;
 
-  /// Creates field for selection of a numerical value on a slider
   FormBuilderSlider({
     Key key,
-    //From Super
-    @required String name,
-    FormFieldValidator<double> validator,
-    @required double initialValue,
-    InputDecoration decoration = const InputDecoration(),
-    ValueChanged<double> onChanged,
-    ValueTransformer<double> valueTransformer,
-    bool enabled = true,
-    FormFieldSetter<double> onSaved,
-    AutovalidateMode autovalidateMode = AutovalidateMode.disabled,
-    VoidCallback onReset,
-    FocusNode focusNode,
+    @required this.attribute,
     @required this.min,
     @required this.max,
+    @required this.initialValue,
+    this.validators = const [],
+    this.readOnly = false,
+    this.decoration = const InputDecoration(),
     this.divisions,
+    this.onChanged,
+    this.valueTransformer,
     this.activeColor,
     this.inactiveColor,
     this.onChangeStart,
@@ -153,90 +54,127 @@ class FormBuilderSlider extends FormBuilderField<double> {
     this.label,
     this.semanticFormatterCallback,
     this.numberFormat,
+    this.onSaved,
     this.displayValues = DisplayValues.all,
     this.minTextStyle,
-    this.textStyle,
+    this.textStyle = const TextStyle(),
     this.maxTextStyle,
+    this.focusNode,
     this.autofocus = false,
     this.mouseCursor,
-  }) : super(
-          key: key,
-          initialValue: initialValue,
-          name: name,
-          validator: validator,
-          valueTransformer: valueTransformer,
-          onChanged: onChanged,
-          autovalidateMode: autovalidateMode,
-          onSaved: onSaved,
-          enabled: enabled,
-          onReset: onReset,
-          decoration: decoration,
-          focusNode: focusNode,
-          builder: (FormFieldState<double> field) {
-            final state = field as _FormBuilderSliderState;
-            final _numberFormat = numberFormat ?? NumberFormat.compact();
-            return InputDecorator(
-              decoration: state.decoration(),
-              child: Container(
-                padding: const EdgeInsets.only(top: 10.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Slider(
-                      value: field.value,
-                      min: min,
-                      max: max,
-                      divisions: divisions,
-                      activeColor: activeColor,
-                      inactiveColor: inactiveColor,
-                      onChangeEnd: onChangeEnd,
-                      onChangeStart: onChangeStart,
-                      label: label,
-                      semanticFormatterCallback: semanticFormatterCallback,
-                      onChanged: state.enabled
-                          ? (value) {
-                              state.requestFocus();
-                              field.didChange(value);
-                            }
-                          : null,
-                      autofocus: autofocus,
-                      mouseCursor: mouseCursor,
-                      focusNode: state.effectiveFocusNode,
-                    ),
-                    Row(
-                      children: <Widget>[
-                        if (displayValues != DisplayValues.none &&
-                            displayValues != DisplayValues.current)
-                          Text(
-                            _numberFormat.format(min),
-                            style: minTextStyle ?? textStyle,
-                          ),
-                        const Spacer(),
-                        if (displayValues != DisplayValues.none &&
-                            displayValues != DisplayValues.minMax)
-                          Text(
-                            _numberFormat.format(field.value),
-                            style: textStyle,
-                          ),
-                        const Spacer(),
-                        if (displayValues != DisplayValues.none &&
-                            displayValues != DisplayValues.current)
-                          Text(
-                            _numberFormat.format(max),
-                            style: maxTextStyle ?? textStyle,
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
+  }) : super(key: key);
 
   @override
   _FormBuilderSliderState createState() => _FormBuilderSliderState();
 }
 
-class _FormBuilderSliderState
-    extends FormBuilderFieldState<FormBuilderSlider, double> {}
+class _FormBuilderSliderState extends State<FormBuilderSlider> {
+  bool _readOnly = false;
+  final GlobalKey<FormFieldState> _fieldKey = GlobalKey<FormFieldState>();
+  FormBuilderState _formState;
+  double _initialValue;
+  NumberFormat _numberFormat;
+
+  @override
+  void initState() {
+    _formState = FormBuilder.of(context);
+    _formState?.registerFieldKey(widget.attribute, _fieldKey);
+    _initialValue = widget.initialValue ??
+        ((_formState?.initialValue?.containsKey(widget.attribute) ?? false)
+            ? _formState.initialValue[widget.attribute]
+            : null);
+    _numberFormat = widget.numberFormat ?? NumberFormat('##0.0');
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _formState?.unregisterFieldKey(widget.attribute);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _readOnly = _formState?.readOnly == true || widget.readOnly;
+
+    return FormField(
+      key: _fieldKey,
+      enabled: !_readOnly,
+      initialValue: _initialValue,
+      validator: (val) =>
+          FormBuilderValidators.validateValidators(val, widget.validators),
+      onSaved: (val) {
+        var transformed;
+        if (widget.valueTransformer != null) {
+          transformed = widget.valueTransformer(val);
+          _formState?.setAttributeValue(widget.attribute, transformed);
+        } else {
+          _formState?.setAttributeValue(widget.attribute, val);
+        }
+        widget.onSaved?.call(transformed ?? val);
+      },
+      builder: (FormFieldState<dynamic> field) {
+        return InputDecorator(
+          decoration: widget.decoration.copyWith(
+            enabled: !_readOnly,
+            errorText: field.errorText,
+          ),
+          child: Container(
+            padding: const EdgeInsets.only(top: 10.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Slider(
+                  value: field.value,
+                  min: widget.min,
+                  max: widget.max,
+                  divisions: widget.divisions,
+                  activeColor: widget.activeColor,
+                  inactiveColor: widget.inactiveColor,
+                  onChangeEnd: widget.onChangeEnd,
+                  onChangeStart: widget.onChangeStart,
+                  label: widget.label,
+                  semanticFormatterCallback: widget.semanticFormatterCallback,
+                  focusNode: widget.focusNode,
+                  autofocus: widget.autofocus,
+                  mouseCursor: widget.mouseCursor,
+                  onChanged: _readOnly
+                      ? null
+                      : (double value) {
+                          FocusScope.of(context).requestFocus(FocusNode());
+                          field.didChange(value);
+                          widget.onChanged?.call(value);
+                        },
+                ),
+                Row(
+                  children: <Widget>[
+                    if (widget.displayValues != DisplayValues.none &&
+                        widget.displayValues != DisplayValues.current)
+                      Text(
+                        '${_numberFormat.format(widget.min)}',
+                        style: widget.minTextStyle ?? widget.textStyle,
+                      ),
+                    Spacer(),
+                    if (widget.displayValues != DisplayValues.none &&
+                        widget.displayValues != DisplayValues.minMax)
+                      Text(
+                        '${_numberFormat.format(field.value)}',
+                        style: widget.textStyle,
+                      ),
+                    Spacer(),
+                    if (widget.displayValues != DisplayValues.none &&
+                        widget.displayValues != DisplayValues.current)
+                      Text(
+                        '${_numberFormat.format(widget.max)}',
+                        style: widget.maxTextStyle ?? widget.textStyle,
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}

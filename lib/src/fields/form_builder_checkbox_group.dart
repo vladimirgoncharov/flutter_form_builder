@@ -3,9 +3,18 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_form_builder/src/widgets/grouped_checkbox.dart';
 
-/// A list of Checkboxes for selecting multiple options
-class FormBuilderCheckboxGroup<T> extends FormBuilderField<List<T>> {
-  final List<FormBuilderFieldOption<T>> options;
+class FormBuilderCheckboxGroup<T> extends StatefulWidget {
+  final String attribute;
+  final List<FormFieldValidator> validators;
+  final List<T> initialValue;
+  final bool readOnly;
+  final InputDecoration decoration;
+  final ValueChanged onChanged;
+  final ValueTransformer valueTransformer;
+  final bool enabled;
+  final FormFieldSetter onSaved;
+  final AutovalidateMode autovalidateMode;
+  final List<FormBuilderFieldOption> options;
   final Color activeColor;
   final Color checkColor;
   final Color focusColor;
@@ -14,32 +23,35 @@ class FormBuilderCheckboxGroup<T> extends FormBuilderField<List<T>> {
   final MaterialTapTargetSize materialTapTargetSize;
   final bool tristate;
   final Axis wrapDirection;
+
   final WrapAlignment wrapAlignment;
+
   final double wrapSpacing;
+
   final WrapAlignment wrapRunAlignment;
+
   final double wrapRunSpacing;
+
   final WrapCrossAlignment wrapCrossAxisAlignment;
+
   final TextDirection wrapTextDirection;
   final VerticalDirection wrapVerticalDirection;
   final Widget separator;
   final ControlAffinity controlAffinity;
-  final OptionsOrientation orientation;
 
-  /// Creates a list of Checkboxes for selecting multiple options
+  final GroupedCheckboxOrientation orientation;
+
   FormBuilderCheckboxGroup({
     Key key,
-    //From Super
-    @required String name,
-    FormFieldValidator<List<T>> validator,
-    List<T> initialValue,
-    InputDecoration decoration = const InputDecoration(),
-    ValueChanged<List<T>> onChanged,
-    ValueTransformer<List<T>> valueTransformer,
-    bool enabled = true,
-    FormFieldSetter<List<T>> onSaved,
-    AutovalidateMode autovalidateMode = AutovalidateMode.disabled,
-    VoidCallback onReset,
-    FocusNode focusNode,
+    @required this.attribute,
+    this.initialValue,
+    this.readOnly = false,
+    this.decoration = const InputDecoration(),
+    this.onChanged,
+    this.valueTransformer,
+    this.enabled = true,
+    this.onSaved,
+    this.autovalidateMode,
     @required this.options,
     this.activeColor,
     this.checkColor,
@@ -58,61 +70,97 @@ class FormBuilderCheckboxGroup<T> extends FormBuilderField<List<T>> {
     this.wrapVerticalDirection = VerticalDirection.down,
     this.separator,
     this.controlAffinity = ControlAffinity.leading,
-    this.orientation = OptionsOrientation.wrap,
+    this.orientation = GroupedCheckboxOrientation.wrap,
+    this.validators = const [],
   }) : super(
           key: key,
-          initialValue: initialValue,
-          name: name,
-          validator: validator,
-          valueTransformer: valueTransformer,
-          onChanged: onChanged,
-          autovalidateMode: autovalidateMode,
-          onSaved: onSaved,
-          enabled: enabled,
-          onReset: onReset,
-          decoration: decoration,
-          focusNode: focusNode,
-          builder: (FormFieldState<List<T>> field) {
-            final state = field as _FormBuilderCheckboxGroupState<T>;
-
-            return InputDecorator(
-              decoration: state.decoration(),
-              child: GroupedCheckbox<T>(
-                orientation: orientation,
-                value: state.value,
-                options: options,
-                onChanged: (val) {
-                  state.requestFocus();
-                  field.didChange(val);
-                },
-                disabled: state.enabled
-                    ? disabled
-                    : options.map((e) => e.value).toList(),
-                activeColor: activeColor,
-                focusColor: focusColor,
-                checkColor: checkColor,
-                materialTapTargetSize: materialTapTargetSize,
-                hoverColor: hoverColor,
-                tristate: tristate,
-                wrapAlignment: wrapAlignment,
-                wrapCrossAxisAlignment: wrapCrossAxisAlignment,
-                wrapDirection: wrapDirection,
-                wrapRunAlignment: wrapRunAlignment,
-                wrapRunSpacing: wrapRunSpacing,
-                wrapSpacing: wrapSpacing,
-                wrapTextDirection: wrapTextDirection,
-                wrapVerticalDirection: wrapVerticalDirection,
-                separator: separator,
-                controlAffinity: controlAffinity,
-              ),
-            );
-          },
         );
 
   @override
   _FormBuilderCheckboxGroupState<T> createState() =>
-      _FormBuilderCheckboxGroupState<T>();
+      _FormBuilderCheckboxGroupState();
 }
 
 class _FormBuilderCheckboxGroupState<T>
-    extends FormBuilderFieldState<FormBuilderCheckboxGroup<T>, List<T>> {}
+    extends State<FormBuilderCheckboxGroup> {
+  bool _readOnly = false;
+  final GlobalKey<FormFieldState> _fieldKey = GlobalKey<FormFieldState>();
+  FormBuilderState _formState;
+  dynamic _initialValue;
+
+  @override
+  void initState() {
+    _formState = FormBuilder.of(context);
+    _formState?.registerFieldKey(widget.attribute, _fieldKey);
+    _initialValue = widget.initialValue ??
+        ((_formState?.initialValue?.containsKey(widget.attribute) ?? false)
+            ? _formState.initialValue[widget.attribute]
+            : null);
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _formState?.unregisterFieldKey(widget.attribute);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _readOnly = _formState?.readOnly == true || widget.readOnly;
+
+    return FormField(
+      key: _fieldKey,
+      enabled: !_readOnly,
+      initialValue: _initialValue,
+      validator: (val) =>
+          FormBuilderValidators.validateValidators(val, widget.validators),
+      onSaved: (val) {
+        var transformed;
+        if (widget.valueTransformer != null) {
+          transformed = widget.valueTransformer(val);
+          _formState?.setAttributeValue(widget.attribute, transformed);
+        } else {
+          _formState?.setAttributeValue(widget.attribute, val);
+        }
+        widget.onSaved?.call(transformed ?? val);
+      },
+      builder: (FormFieldState field) {
+        return InputDecorator(
+          decoration: widget.decoration.copyWith(
+            enabled: !_readOnly,
+            errorText: field.errorText,
+          ),
+          child: GroupedCheckbox(
+            orientation: widget.orientation,
+            value: field.value,
+            options: widget.options,
+            onChanged: (val) {
+              field.didChange(val);
+              widget.onChanged?.call(val);
+            },
+            activeColor: widget.activeColor,
+            focusColor: widget.focusColor,
+            checkColor: widget.checkColor,
+            materialTapTargetSize: widget.materialTapTargetSize,
+            disabled: _readOnly
+                ? widget.options.map((e) => e.value).toList()
+                : widget.disabled,
+            hoverColor: widget.hoverColor,
+            tristate: widget.tristate,
+            wrapAlignment: widget.wrapAlignment,
+            wrapCrossAxisAlignment: widget.wrapCrossAxisAlignment,
+            wrapDirection: widget.wrapDirection,
+            wrapRunAlignment: widget.wrapRunAlignment,
+            wrapRunSpacing: widget.wrapRunSpacing,
+            wrapSpacing: widget.wrapSpacing,
+            wrapTextDirection: widget.wrapTextDirection,
+            wrapVerticalDirection: widget.wrapVerticalDirection,
+            separator: widget.separator,
+            controlAffinity: widget.controlAffinity,
+          ),
+        );
+      },
+    );
+  }
+}

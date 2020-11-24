@@ -1,25 +1,19 @@
-import 'dart:ui';
-
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 
-/// On/Off switch field
-class FormBuilderSwitch extends FormBuilderField<bool> {
-  /// The primary content of the list tile.
-  ///
-  /// Typically a [Text] widget.
-  final Widget title;
+class FormBuilderSwitch extends StatefulWidget {
+  final String attribute;
+  final List<FormFieldValidator> validators;
+  final bool initialValue;
+  final bool readOnly;
+  final InputDecoration decoration;
+  final ValueChanged onChanged;
+  final ValueTransformer valueTransformer;
 
-  /// Additional content displayed below the title.
-  ///
-  /// Typically a [Text] widget.
-  final Widget subtitle;
-
-  /// A widget to display on the opposite side of the tile from the switch.
-  ///
-  /// Typically an [Icon] widget.
-  final Widget secondary;
+  final Widget label;
 
   /// The color to use when this switch is on.
   ///
@@ -57,107 +51,149 @@ class FormBuilderSwitch extends FormBuilderField<bool> {
   /// Ignored if this switch is created with [Switch.adaptive].
   final ImageProvider inactiveThumbImage;
 
-  /// The tile's internal padding.
+  /// Configures the minimum size of the tap target.
   ///
-  /// Insets a [SwitchListTile]'s contents: its [title], [subtitle],
-  /// [secondary], and [Switch] widgets.
+  /// Defaults to [ThemeData.materialTapTargetSize].
   ///
-  /// If null, [ListTile]'s default of `EdgeInsets.symmetric(horizontal: 16.0)`
-  /// is used.
-  final EdgeInsets contentPadding;
+  /// See also:
+  ///
+  ///  * [MaterialTapTargetSize], for a description of how this affects tap targets.
+  final MaterialTapTargetSize materialTapTargetSize;
 
   /// {@macro flutter.cupertino.switch.dragStartBehavior}
-  final ListTileControlAffinity controlAffinity;
-
-  /// Whether to render icons and text in the [activeColor].
-  ///
-  /// No effort is made to automatically coordinate the [selected] state and the
-  /// [value] state. To have the list tile appear selected when the switch is
-  /// on, pass the same value to both.
-  ///
-  /// Normally, this property is left to its default value, false.
-  final bool selected;
-
-  /// {@macro flutter.widgets.Focus.autofocus}
+  final DragStartBehavior dragStartBehavior;
+  final FormFieldSetter onSaved;
+  final EdgeInsets contentPadding;
+  final MouseCursor mouseCursor;
   final bool autofocus;
+  final FocusNode focusNode;
+  final Color hoverColor;
+  final Color focusColor;
+  final ImageErrorListener onActiveThumbImageError;
+  final ImageErrorListener onInactiveThumbImageError;
 
-  /// Creates On/Off switch field
   FormBuilderSwitch({
     Key key,
-    //From Super
-    @required String name,
-    FormFieldValidator<bool> validator,
-    bool initialValue,
-    InputDecoration decoration = const InputDecoration(),
-    ValueChanged<bool> onChanged,
-    ValueTransformer<bool> valueTransformer,
-    bool enabled = true,
-    FormFieldSetter<bool> onSaved,
-    AutovalidateMode autovalidateMode = AutovalidateMode.disabled,
-    VoidCallback onReset,
-    FocusNode focusNode,
-    @required this.title,
+    @required this.attribute,
+    @required this.label,
+    this.initialValue,
+    this.validators = const [],
+    this.readOnly = false,
+    this.decoration = const InputDecoration(),
+    this.onChanged,
+    this.valueTransformer,
     this.activeColor,
     this.activeTrackColor,
     this.inactiveThumbColor,
     this.inactiveTrackColor,
     this.activeThumbImage,
     this.inactiveThumbImage,
-    this.subtitle,
-    this.secondary,
-    this.controlAffinity = ListTileControlAffinity.trailing,
-    this.contentPadding = EdgeInsets.zero,
+    this.materialTapTargetSize,
+    this.dragStartBehavior = DragStartBehavior.start,
+    this.onSaved,
+    this.contentPadding = const EdgeInsets.all(0.0),
+    this.mouseCursor,
     this.autofocus = false,
-    this.selected = false,
-  }) : super(
-          key: key,
-          initialValue: initialValue,
-          name: name,
-          validator: validator,
-          valueTransformer: valueTransformer,
-          onChanged: onChanged,
-          autovalidateMode: autovalidateMode,
-          onSaved: onSaved,
-          enabled: enabled,
-          onReset: onReset,
-          decoration: decoration,
-          focusNode: focusNode,
-          builder: (FormFieldState<bool> field) {
-            final state = field as _FormBuilderSwitchState;
-
-            return InputDecorator(
-              decoration: state.decoration(),
-              child: SwitchListTile(
-                dense: true,
-                isThreeLine: false,
-                contentPadding: contentPadding,
-                title: title,
-                value: state.value,
-                onChanged: state.enabled
-                    ? (val) {
-                        state.requestFocus();
-                        field.didChange(val);
-                      }
-                    : null,
-                activeColor: activeColor,
-                activeThumbImage: activeThumbImage,
-                activeTrackColor: activeTrackColor,
-                inactiveThumbColor: inactiveThumbColor,
-                inactiveThumbImage: activeThumbImage,
-                inactiveTrackColor: inactiveTrackColor,
-                secondary: secondary,
-                subtitle: subtitle,
-                autofocus: autofocus,
-                selected: selected,
-                controlAffinity: controlAffinity,
-              ),
-            );
-          },
-        );
+    this.focusNode,
+    this.hoverColor,
+    this.focusColor,
+    this.onActiveThumbImageError,
+    this.onInactiveThumbImageError,
+  }) : super(key: key);
 
   @override
   _FormBuilderSwitchState createState() => _FormBuilderSwitchState();
 }
 
-class _FormBuilderSwitchState
-    extends FormBuilderFieldState<FormBuilderSwitch, bool> {}
+class _FormBuilderSwitchState extends State<FormBuilderSwitch> {
+  bool _readOnly = false;
+  final GlobalKey<FormFieldState> _fieldKey = GlobalKey<FormFieldState>();
+  FormBuilderState _formState;
+  bool _initialValue;
+
+  @override
+  void initState() {
+    _formState = FormBuilder.of(context);
+    _formState?.registerFieldKey(widget.attribute, _fieldKey);
+    _initialValue = widget.initialValue ??
+        ((_formState?.initialValue?.containsKey(widget.attribute) ?? false)
+            ? _formState.initialValue[widget.attribute]
+            : null);
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _formState?.unregisterFieldKey(widget.attribute);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _readOnly = _formState?.readOnly == true || widget.readOnly;
+
+    return FormField(
+        key: _fieldKey,
+        enabled: !_readOnly,
+        initialValue: _initialValue ?? false,
+        validator: (val) =>
+            FormBuilderValidators.validateValidators(val, widget.validators),
+        onSaved: (val) {
+          var transformed;
+          if (widget.valueTransformer != null) {
+            transformed = widget.valueTransformer(val);
+            _formState?.setAttributeValue(widget.attribute, transformed);
+          } else {
+            _formState?.setAttributeValue(widget.attribute, val);
+          }
+          widget.onSaved?.call(transformed ?? val);
+        },
+        builder: (FormFieldState<dynamic> field) {
+          return InputDecorator(
+            decoration: widget.decoration.copyWith(
+              enabled: !_readOnly,
+              errorText: field.errorText,
+            ),
+            child: ListTile(
+              dense: true,
+              isThreeLine: false,
+              contentPadding: widget.contentPadding,
+              title: widget.label,
+              trailing: Switch(
+                value: field.value,
+                onChanged: _readOnly
+                    ? null
+                    : (bool value) {
+                        FocusScope.of(context).requestFocus(FocusNode());
+                        field.didChange(value);
+                        widget.onChanged?.call(value);
+                      },
+                activeColor: widget.activeColor,
+                activeThumbImage: widget.activeThumbImage,
+                activeTrackColor: widget.activeTrackColor,
+                dragStartBehavior: widget.dragStartBehavior,
+                inactiveThumbColor: widget.inactiveThumbColor,
+                inactiveThumbImage: widget.activeThumbImage,
+                inactiveTrackColor: widget.inactiveTrackColor,
+                materialTapTargetSize: widget.materialTapTargetSize,
+                mouseCursor: widget.mouseCursor,
+                autofocus: widget.autofocus,
+                focusNode: widget.focusNode,
+                hoverColor: widget.hoverColor,
+                focusColor: widget.focusColor,
+                onActiveThumbImageError: widget.onActiveThumbImageError,
+                onInactiveThumbImageError: widget.onInactiveThumbImageError,
+              ),
+              onTap: _readOnly
+                  ? null
+                  : () {
+                      FocusScope.of(context).requestFocus(FocusNode());
+                      final newValue = !(field.value ?? false);
+                      field.didChange(newValue);
+                      widget.onChanged?.call(newValue);
+                    },
+            ),
+          );
+        });
+  }
+}

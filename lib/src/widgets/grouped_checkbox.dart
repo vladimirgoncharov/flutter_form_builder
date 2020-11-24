@@ -3,18 +3,19 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 
 class GroupedCheckbox<T> extends StatefulWidget {
   /// A list of string that describes each checkbox. Each item must be distinct.
-  final List<FormBuilderFieldOption<T>> options;
+  final List<FormBuilderFieldOption> options;
 
   /// A list of string which specifies automatically checked checkboxes.
   /// Every element must match an item from itemList.
   final List<T> value;
 
-  /// Specifies which checkbox option values should be disabled.
-  /// If this is null, then no checkbox options will be disabled.
+  /// Specifies which boxes should be disabled.
+  /// If this is non-null, no boxes will be disabled.
+  /// The strings passed to this must match the labels.
   final List<T> disabled;
 
   /// Specifies the orientation of the elements in itemList.
-  final OptionsOrientation orientation;
+  final GroupedCheckboxOrientation orientation;
 
   /// Called when the value of the checkbox group changes.
   final ValueChanged<List<T>> onChanged;
@@ -180,7 +181,6 @@ class GroupedCheckbox<T> extends StatefulWidget {
   final ControlAffinity controlAffinity;
 
   GroupedCheckbox({
-    Key key,
     @required this.options,
     @required this.orientation,
     @required this.onChanged,
@@ -202,48 +202,43 @@ class GroupedCheckbox<T> extends StatefulWidget {
     this.wrapVerticalDirection = VerticalDirection.down,
     this.separator,
     this.controlAffinity = ControlAffinity.leading,
-  }) : super(key: key);
+  });
 
   @override
-  _GroupedCheckboxState<T> createState() => _GroupedCheckboxState<T>();
+  _GroupedCheckboxState createState() => _GroupedCheckboxState();
 }
 
 class _GroupedCheckboxState<T> extends State<GroupedCheckbox<T>> {
-  final selectedListItems = <T>[];
-
-  @override
-  void initState() {
-    super.initState();
-
-    if (widget.value != null) {
-      selectedListItems.addAll(widget.value);
-    }
-  }
+  List<T> selectedListItems = <T>[];
 
   @override
   Widget build(BuildContext context) {
-    final widgetList = <Widget>[];
+    var finalWidget = generateItems();
+    return finalWidget;
+  }
+
+  Widget generateItems() {
+    var content = <Widget>[];
+    Widget finalWidget;
+    if (widget.value != null) {
+      selectedListItems = widget.value;
+    }
+    var widgetList = <Widget>[];
     for (var i = 0; i < widget.options.length; i++) {
       widgetList.add(item(i));
     }
-    Widget finalWidget;
-    if (widget.orientation == OptionsOrientation.vertical) {
+    if (widget.orientation == GroupedCheckboxOrientation.vertical) {
+      for (final item in widgetList) {
+        content.add(Row(children: <Widget>[item]));
+      }
       finalWidget = SingleChildScrollView(
-        scrollDirection: Axis.vertical,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: widgetList,
-        ),
-      );
-    } else if (widget.orientation == OptionsOrientation.horizontal) {
+          scrollDirection: Axis.vertical, child: Column(children: content));
+    } else if (widget.orientation == GroupedCheckboxOrientation.horizontal) {
+      for (final item in widgetList) {
+        content.add(Column(children: <Widget>[item]));
+      }
       finalWidget = SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: widgetList.map((item) {
-            return Column(children: <Widget>[item]);
-          }).toList(),
-        ),
-      );
+          scrollDirection: Axis.horizontal, child: Row(children: content));
     } else {
       finalWidget = SingleChildScrollView(
         child: Wrap(
@@ -263,36 +258,35 @@ class _GroupedCheckboxState<T> extends State<GroupedCheckbox<T>> {
   }
 
   Widget item(int index) {
-    final option = widget.options[index];
-    final optionValue = option.value;
-    final isOptionDisabled = true == widget.disabled?.contains(optionValue);
-    final control = Checkbox(
+    var control = Checkbox(
       activeColor: widget.activeColor,
       checkColor: widget.checkColor,
       focusColor: widget.focusColor,
       hoverColor: widget.hoverColor,
       materialTapTargetSize: widget.materialTapTargetSize,
-      value: selectedListItems.contains(optionValue),
+      value: selectedListItems.contains(widget.options[index].value),
       tristate: widget.tristate,
-      onChanged: isOptionDisabled
+      onChanged: (widget.disabled != null &&
+              widget.disabled.contains(widget.options.elementAt(index).value))
           ? null
-          : (selected) {
+          : (bool selected) {
               selected
-                  ? selectedListItems.add(optionValue)
-                  : selectedListItems.remove(optionValue);
+                  ? selectedListItems.add(widget.options[index].value)
+                  : selectedListItems.remove(widget.options[index].value);
               setState(() {
                 widget.onChanged(selectedListItems);
               });
             },
     );
-    final label = GestureDetector(
-      child: option,
-      onTap: isOptionDisabled
+    var label = GestureDetector(
+      child: widget.options[index],
+      onTap: (widget.disabled != null &&
+              widget.disabled.contains(widget.options.elementAt(index).value))
           ? null
           : () {
-              selectedListItems.contains(optionValue)
-                  ? selectedListItems.remove(optionValue)
-                  : selectedListItems.add(optionValue);
+              !selectedListItems.contains(widget.options[index].value)
+                  ? selectedListItems.add(widget.options[index].value)
+                  : selectedListItems.remove(widget.options[index].value);
               setState(() {
                 widget.onChanged(selectedListItems);
               });
@@ -302,12 +296,21 @@ class _GroupedCheckboxState<T> extends State<GroupedCheckbox<T>> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        if (widget.controlAffinity == ControlAffinity.leading) control,
-        Flexible(flex: 1, child: label),
-        if (widget.controlAffinity == ControlAffinity.trailing) control,
-        if (widget.separator != null && index != widget.options.length - 1)
+        if (widget.controlAffinity == ControlAffinity.leading) ...[
+          control,
+          Flexible(child: label),
+        ],
+        if (widget.controlAffinity == ControlAffinity.trailing) ...[
+          label,
+          Flexible(child: control),
+        ],
+        if (widget.separator != null &&
+            widget.options[index] != widget.options.last)
           widget.separator,
       ],
     );
   }
 }
+
+enum GroupedCheckboxOrientation { horizontal, vertical, wrap }
+enum ControlAffinity { leading, trailing }

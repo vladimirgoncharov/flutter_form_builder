@@ -4,7 +4,8 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_touch_spin/flutter_touch_spin.dart';
 import 'package:intl/intl.dart';
 
-class FormBuilderTouchSpin extends StatefulWidget {
+@Deprecated('Use `FormBuilderTouchSpin` instead.')
+class FormBuilderStepper extends StatefulWidget {
   final String attribute;
   final List<FormFieldValidator> validators;
   final num initialValue;
@@ -15,10 +16,12 @@ class FormBuilderTouchSpin extends StatefulWidget {
   final num step;
   final num min;
   final num max;
+  final num size;
   final FormFieldSetter onSaved;
   final Icon subtractIcon;
   final Icon addIcon;
-  final num iconSize;
+
+  final double iconSize;
 
   final NumberFormat displayFormat;
 
@@ -30,7 +33,7 @@ class FormBuilderTouchSpin extends StatefulWidget {
 
   final Color iconDisabledColor;
 
-  FormBuilderTouchSpin({
+  FormBuilderStepper({
     Key key,
     @required this.attribute,
     this.initialValue,
@@ -40,6 +43,7 @@ class FormBuilderTouchSpin extends StatefulWidget {
     this.step,
     this.min = 1,
     this.max = 9999,
+    @Deprecated('Use `iconSize` instead') this.size,
     this.onChanged,
     this.valueTransformer,
     this.onSaved,
@@ -51,13 +55,15 @@ class FormBuilderTouchSpin extends StatefulWidget {
     this.textStyle = const TextStyle(fontSize: 24),
     this.iconActiveColor,
     this.iconDisabledColor,
-  }) : super(key: key);
+  })  : assert(size != null || iconSize != null),
+        super(key: key);
 
   @override
-  _FormBuilderTouchSpinState createState() => _FormBuilderTouchSpinState();
+  _FormBuilderStepperState createState() => _FormBuilderStepperState();
 }
 
-class _FormBuilderTouchSpinState extends State<FormBuilderTouchSpin> {
+// ignore: deprecated_member_use_from_same_package
+class _FormBuilderStepperState extends State<FormBuilderStepper> {
   bool _readOnly = false;
   final GlobalKey<FormFieldState> _fieldKey = GlobalKey<FormFieldState>();
   FormBuilderState _formState;
@@ -107,12 +113,11 @@ class _FormBuilderTouchSpinState extends State<FormBuilderTouchSpin> {
             errorText: field.errorText,
           ),
           child: TouchSpin(
-            key: ObjectKey(field.value),
             min: widget.min,
             max: widget.max,
             step: widget.step,
             value: field.value,
-            iconSize: widget.iconSize,
+            iconSize: widget.size ?? widget.iconSize,
             onChanged: _readOnly
                 ? null
                 : (value) {

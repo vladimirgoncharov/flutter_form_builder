@@ -1,22 +1,27 @@
 import 'package:flutter/material.dart';
 
-/// An option for fields with selection options.
-///
-/// The type `T` is the type of the value the entry represents. All the entries
-/// in a given menu must represent values with consistent types.
-class FormBuilderFieldOption<T> extends StatelessWidget {
+class FormBuilderFieldOption extends StatelessWidget {
+  @Deprecated('Use `child` instead. Will be removed in the next major version.')
+  final String label;
   final Widget child;
-  final T value;
+  final dynamic value;
 
-  /// Creates an option for fields with selection options
   const FormBuilderFieldOption({
     Key key,
-    @required this.value,
+    @Deprecated('Use `child` instead. Will be removed in the next major version.')
+        // ignore: deprecated_member_use_from_same_package
+        this.label,
+    @required
+        this.value,
     this.child,
-  }) : super(key: key);
+  })  :
+        // ignore: deprecated_member_use_from_same_package
+        assert(label == null || child == null),
+        super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return child ?? Text(value.toString());
+    // ignore: deprecated_member_use_from_same_package
+    return child ?? Text(label ?? value.toString());
   }
 }

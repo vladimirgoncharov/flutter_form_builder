@@ -1,37 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 
-class FormBuilderCheckbox extends StatefulWidget {
+@Deprecated('Prefer using `FormBuilderRadioGroup` instead')
+class FormBuilderRadio extends StatefulWidget {
   final String attribute;
   final List<FormFieldValidator> validators;
-  final bool initialValue;
+  final dynamic initialValue;
   final bool readOnly;
   final InputDecoration decoration;
   final ValueChanged onChanged;
   final ValueTransformer valueTransformer;
+
   final bool leadingInput;
-
-  final Widget label;
-
-  final Color activeColor;
-  final Color checkColor;
+  final List<FormBuilderFieldOption> options;
   final MaterialTapTargetSize materialTapTargetSize;
-  final bool tristate;
+  final Color activeColor;
   final FormFieldSetter onSaved;
   final EdgeInsets contentPadding;
-  final Color focusColor;
-  final Color hoverColor;
-  final FocusNode focusNode;
-  final bool autoFocus;
-  final MouseCursor mouseCursor;
-  final VisualDensity visualDensity;
 
-  FormBuilderCheckbox({
+  FormBuilderRadio({
     Key key,
     @required this.attribute,
-    @required this.label,
+    @required this.options,
     this.initialValue,
     this.validators = const [],
     this.readOnly = false,
@@ -39,29 +30,22 @@ class FormBuilderCheckbox extends StatefulWidget {
     this.onChanged,
     this.valueTransformer,
     this.leadingInput = false,
-    this.activeColor,
-    this.checkColor,
     this.materialTapTargetSize,
-    this.tristate = false,
+    this.activeColor,
     this.onSaved,
     this.contentPadding = const EdgeInsets.all(0.0),
-    this.focusColor,
-    this.hoverColor,
-    this.focusNode,
-    this.autoFocus = false,
-    this.mouseCursor,
-    this.visualDensity,
   }) : super(key: key);
 
   @override
-  _FormBuilderCheckboxState createState() => _FormBuilderCheckboxState();
+  _FormBuilderRadioState createState() => _FormBuilderRadioState();
 }
 
-class _FormBuilderCheckboxState extends State<FormBuilderCheckbox> {
+// ignore: deprecated_member_use_from_same_package
+class _FormBuilderRadioState extends State<FormBuilderRadio> {
   bool _readOnly = false;
   final GlobalKey<FormFieldState> _fieldKey = GlobalKey<FormFieldState>();
   FormBuilderState _formState;
-  bool _initialValue;
+  dynamic _initialValue;
 
   @override
   void initState() {
@@ -80,37 +64,28 @@ class _FormBuilderCheckboxState extends State<FormBuilderCheckbox> {
     super.dispose();
   }
 
-  Widget _checkbox(FormFieldState<dynamic> field) {
-    return Checkbox(
-      value: (field.value == null && !widget.tristate) ? false : field.value,
-      activeColor: widget.activeColor,
-      checkColor: widget.checkColor,
+  Widget _radio(FormFieldState<dynamic> field, int i) {
+    return Radio<dynamic>(
+      value: widget.options[i].value,
+      groupValue: field.value,
       materialTapTargetSize: widget.materialTapTargetSize,
-      tristate: widget.tristate,
+      activeColor: widget.activeColor,
       onChanged: _readOnly
           ? null
-          : (bool value) {
+          : (dynamic value) {
               FocusScope.of(context).requestFocus(FocusNode());
               field.didChange(value);
               widget.onChanged?.call(value);
             },
-      focusColor: widget.focusColor,
-      hoverColor: widget.hoverColor,
-      focusNode: widget.focusNode,
-      autofocus: widget.autoFocus,
-      mouseCursor: widget.mouseCursor,
-      visualDensity: widget.visualDensity,
     );
   }
 
-  Widget _leading(FormFieldState<dynamic> field) {
-    if (widget.leadingInput) return _checkbox(field);
-    return null;
+  Widget _leading(FormFieldState<dynamic> field, int i) {
+    return widget.leadingInput ? _radio(field, i) : null;
   }
 
-  Widget _trailing(FormFieldState<dynamic> field) {
-    if (!widget.leadingInput) return _checkbox(field);
-    return null;
+  Widget _trailing(FormFieldState<dynamic> field, int i) {
+    return !widget.leadingInput ? _radio(field, i) : null;
   }
 
   @override
@@ -134,26 +109,36 @@ class _FormBuilderCheckboxState extends State<FormBuilderCheckbox> {
         widget.onSaved?.call(transformed ?? val);
       },
       builder: (FormFieldState<dynamic> field) {
+        final radioList = <Widget>[];
+        for (var i = 0; i < widget.options.length; i++) {
+          radioList.addAll([
+            ListTile(
+              dense: true,
+              isThreeLine: false,
+              contentPadding: widget.contentPadding,
+              leading: _leading(field, i),
+              title: widget.options[i],
+              trailing: _trailing(field, i),
+              onTap: _readOnly
+                  ? null
+                  : () {
+                      final value = widget.options[i].value;
+                      field.didChange(value);
+                      widget.onChanged?.call(value);
+                    },
+            ),
+            const Divider(
+              height: 0.0,
+            ),
+          ]);
+        }
         return InputDecorator(
           decoration: widget.decoration.copyWith(
             enabled: !_readOnly,
             errorText: field.errorText,
           ),
-          child: ListTile(
-            dense: true,
-            isThreeLine: false,
-            contentPadding: widget.contentPadding,
-            title: widget.label,
-            leading: _leading(field),
-            trailing: _trailing(field),
-            onTap: _readOnly
-                ? null
-                : () {
-                    FocusScope.of(context).requestFocus(FocusNode());
-                    final newValue = !(field.value ?? false);
-                    field.didChange(newValue);
-                    widget.onChanged?.call(newValue);
-                  },
+          child: Column(
+            children: radioList,
           ),
         );
       },
